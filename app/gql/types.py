@@ -1,5 +1,4 @@
-from graphene import ObjectType, String, DateTime, List, Int, Enum, Float
-from app.db.enumerated_types import OrderStatus, BookCategory
+from graphene import ObjectType, String, DateTime, List, Int, Float
 
 
 class OrderItemObject(ObjectType):
@@ -16,7 +15,7 @@ class OrderObject(ObjectType):
     order_id = String()
     user_id = String()
     order_date = DateTime()
-    order_status = Enum(OrderStatus)
+    order_status = String()
     added_at = DateTime()
     updated_at = DateTime()
     order_items = List(lambda: OrderItemObject)
@@ -33,7 +32,7 @@ class BookObject(ObjectType):
     description = String()
     isbn = String()
     price = Float()
-    category = Enum(BookCategory)
+    category = String()
     stock_count = Int()
     added_at = DateTime()
     updated_at = DateTime()
@@ -59,7 +58,7 @@ class AuthorObject(ObjectType):
         return root.books
 
 
-class UserType(ObjectType):
+class UserObject(ObjectType):
     user_id = String()
     name = String()
     email = String()
