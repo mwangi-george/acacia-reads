@@ -141,8 +141,10 @@ class OrderItem(Base, TimestampMixin):
 
     @hybrid_property
     def total_price(self):
+        """Helps avoid syncing issues when price or quantity changes"""
         return self.quantity * self.unit_price
 
     # relationships
     order = relationship('Order', back_populates='order_items')
     book = relationship('Book', back_populates='order_items')
+
