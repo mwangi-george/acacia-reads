@@ -4,7 +4,7 @@ from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Float, Enum, 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
-from app.db.enumerated_types import BookCategory, OrderStatus
+from app.db.enumerated_types import BookCategory, OrderStatus, UserRole
 
 # Base class for all db models
 Base = declarative_base()
@@ -13,6 +13,31 @@ class TimestampMixin:
     """Base tracking for all models"""
     added_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+
+
+
+class User(Base, TimestampMixin):
+    """User model
+
+    Fields:
+        - user_id (str)
+        - name (str)
+        - email (str)
+        - role (str)
+        - hashed_password (str)
+        - added_at (datetime)
+        - updated_at (datetime)
+    """
+
+    __tablename__ = 'users'
+    user_id = Column(String(22), primary_key=True, unique=True, index=True, default=shortuuid.uuid)
+    name = Column(String(100), nullable=False)
+    email = Column(String(60), nullable=False, unique=True, index=True)
+    role = Column(Enum(UserRole), nullable=False, index=True, default=UserRole.USER)
+    hashed_password = Column(String, nullable=False)
+
+    # relationships
+    orders = relationship('Order', back_populates='user', lazy="joined", cascade="all, delete-orphan")
 
 
 
@@ -73,35 +98,12 @@ class Book(Base, TimestampMixin):
 
 
 
-class Customer(Base, TimestampMixin):
-    """Customer model
-    
-    Fields:
-        - customer_id (str)
-        - name (str)
-        - email (str)
-        - hashed_password (str)
-        - added_at (datetime)
-        - updated_at (datetime)
-    """
-    
-    __tablename__ = 'customers'
-    customer_id = Column(String(22), primary_key=True, unique=True, index=True, default=shortuuid.uuid)
-    name = Column(String(100), nullable=False)
-    email = Column(String(60), nullable=False, unique=True, index=True)
-    hashed_password = Column(String, nullable=False)
-
-    # relationships
-    orders =relationship('Order', back_populates='customer', lazy="joined", cascade="all, delete-orphan")
-
-
-
 class Order(Base, TimestampMixin):
     """Order model
 
     Fields:
     - order_id (str)
-    - customer_id (int)
+    - user_id (str)
     - order_date (datetime)
     - order_status (str)
     - added_at (datetime)
@@ -109,12 +111,12 @@ class Order(Base, TimestampMixin):
     """
     __tablename__ = 'orders'
     order_id = Column(String(22), primary_key=True, unique=True, index=True, default=shortuuid.uuid)
-    customer_id = Column(String(22), ForeignKey('customers.customer_id'), nullable=False, index=True)
+    user_id = Column(String(22), ForeignKey('users.user_id'), nullable=False, index=True)
     order_date = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
     order_status = Column(Enum(OrderStatus), nullable=False, index=True)
 
     # relationships
-    customer = relationship('Customer', back_populates='orders')
+    user = relationship('User', back_populates='orders')
     order_items = relationship('OrderItem', back_populates='order', lazy="joined", cascade="all, delete-orphan")
     
 

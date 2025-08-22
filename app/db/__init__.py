@@ -1,1 +1,1 @@
-from .models import Base, Author, Book, Customer, Order, OrderItem
+from .models import Base, User, Author, Book, Order, OrderItem

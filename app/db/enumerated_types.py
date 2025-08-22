@@ -35,15 +35,21 @@ class BookCategory(str, Enum):
 
 
 class OrderStatus(str, Enum):
-    """An enumeration for various book order status"""
+    """An enumeration for various book order statuses"""
     PENDING = 'PENDING'
     SHIPPED = 'SHIPPED'
     DELIVERED = 'DELIVERED'
 
 
 class PaymentStatus(str, Enum):
-    """An enumeration for various payment status"""
+    """An enumeration for various payment statuses"""
     PENDING = 'PENDING'
     PAID = 'PAID'
     PROCESSING = 'PROCESSING'
     FAILED = 'FAILED'
+
+
+class UserRole(str, Enum):
+    """An enumeration for various user roles"""
+    ADMIN = 'ADMIN'
+    USER = 'USER'
