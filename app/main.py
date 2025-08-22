@@ -110,6 +110,6 @@ class APIBuilder:
 
 
 # Instantiate and build app
-build_app = BuildAPI()
+build_app = APIBuilder()
 app = build_app.create_app_instance()
 build_app.mount_graphql_endpoint(app)
