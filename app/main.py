@@ -74,16 +74,13 @@ class APIBuilder:
         return app_instance
 
     @staticmethod
-    def mount_graphql_endpoint(app_instance: FastAPI, endpoint: str = "/graphql") -> FastAPI:
+    def mount_graphql_endpoint(app_instance: FastAPI, endpoint: str = "/graphql") -> None:
         """
         Mounts a GraphQL endpoint to the FastAPI instance.
 
         Args:
             app_instance (FastAPI): The FastAPI application instance.
             endpoint (str): Path for the GraphQL API.
-
-        Returns:
-            FastAPI: The updated app instance with GraphQL mounted.
         """
         gql_schema = Schema()  # TODO: Replace with actual schema
         app_instance.mount(
@@ -93,7 +90,6 @@ class APIBuilder:
                 on_get=make_playground_handler(),  # Enables GraphQL playground in browser
             )
         )
-        return app_instance
 
     @staticmethod
     @asynccontextmanager
