@@ -2,11 +2,14 @@ from fastapi import FastAPI
 from graphene import Schema
 from starlette_graphene3 import GraphQLApp, make_playground_handler
 
+from app.gql.mutations import Mutation
+from app.gql.queries import Query
+
 # GraphQl schema - queries & mutations
-gql_schema = Schema()
+gql_schema = Schema(query=Query, mutation=Mutation)
 
 
-def mount_graphql(app_instance: FastAPI, endpoint: str = "/graphql") -> None:
+def mount_graphql(app_instance: FastAPI, endpoint: str = "/") -> None:
     """
     Mounts a GraphQL endpoint to a FastAPI instance.
 
