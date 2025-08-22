@@ -15,7 +15,7 @@ from app.settings.config import (
 )
 
 
-class BuildAPI:
+class APIBuilder:
     """
     A builder class for initializing and configuring the FastAPI application,
     including health checks, GraphQL endpoints, and application lifecycle logging.
