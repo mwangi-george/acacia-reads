@@ -1,0 +1,73 @@
+from graphene import ObjectType, String, DateTime, List, Int, Enum, Float
+from app.db.enumerated_types import OrderStatus, BookCategory
+
+
+class OrderItemObject(ObjectType):
+    order_item_id = Int()
+    order_id = String()
+    book_id = String()
+    quantity = Int()
+    unit_price = Float()
+    total_price = Float()
+    added_at = DateTime()
+
+
+class OrderObject(ObjectType):
+    order_id = String()
+    user_id = String()
+    order_date = DateTime()
+    order_status = Enum(OrderStatus)
+    added_at = DateTime()
+    updated_at = DateTime()
+    order_items = List(lambda: OrderItemObject)
+
+    @staticmethod
+    def resolve_order_items(root, info):
+        return root.order_items
+
+
+class BookObject(ObjectType):
+    book_id = String()
+    author_id = String()
+    title = String()
+    description = String()
+    isbn = String()
+    price = Float()
+    category = Enum(BookCategory)
+    stock_count = Int()
+    added_at = DateTime()
+    updated_at = DateTime()
+    order_items = List(lambda: OrderItemObject)
+
+    @staticmethod
+    def resolve_order_items(root, info):
+        return root.order_items
+
+
+class AuthorObject(ObjectType):
+    author_id = String()
+    first_name = String()
+    last_name = String()
+    email = String()
+    bio = String()
+    added_at = DateTime()
+    updated_at = DateTime()
+    books = List(lambda: BookObject)
+
+    @staticmethod
+    def resolve_books(root, info):
+        return root.books
+
+
+class UserType(ObjectType):
+    user_id = String()
+    name = String()
+    email = String()
+    role = String()
+    added_at = DateTime()
+    updated_at = DateTime()
+    orders = List(lambda: OrderObject)
+
+    @staticmethod
+    def resolve_orders(root, info):
+        return root.orders
