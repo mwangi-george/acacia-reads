@@ -5,8 +5,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from loguru import logger
 
 from app.db import User, SessionLocal
+from app.db.enumerated_types import UserRole
 from app.gql.types import UserObject
-from app.utils.utils import hash_password
+from app.utils.utils import (
+    hash_password, logged_in_user, admin_user,
+    verify_password, generate_access_token,
+)
 
 
 class AddUser(Mutation):
@@ -89,6 +93,7 @@ class UpdateUser(Mutation):
     user = Field(lambda: UserObject)
 
     @staticmethod
+    @logged_in_user
     async def mutate(root, info, user_id, name = None, email = None, password = None):
         """
         Resolver function for the mutation.
@@ -121,3 +126,92 @@ class UpdateUser(Mutation):
                 await session.rollback()
                 logger.exception(f"Error updating user: {str(e)}")
                 raise GraphQLError("Unexpected error occurred while updating user")
+
+
+class LoginUser(Mutation):
+    """
+    GraphQL mutation for authenticating a user and issuing an access token.
+
+    This mutation verifies the provided email and password against the database,
+    and if valid, returns a JWT token that can be used for authenticated requests.
+    """
+    class Arguments:
+        email = String(required=True)
+        password = String(required=True)
+
+    token = String(description="JWT access token if login is successful.")
+
+    @staticmethod
+    async def mutate(root, info, email, password):
+        """
+        Handle the login process: validate user credentials and issue token.
+
+        Args:
+            root (Object): Root of the mutation
+            info (Object): Information about the mutation
+            email (str): User's email address.
+            password (str): Raw user password.
+        """
+        async with SessionLocal() as session:
+            # Fetch user by email
+            db_result = await session.execute(select(User).where(User.email == email))
+            user = db_result.unique().scalars().one_or_none()
+
+            if not user:
+                # Fail if no user found with the given email
+                raise GraphQLError("User not found")
+
+            # Verify password (raises GraphQLError if incorrect)
+            verify_password(user.hashed_password, password)
+
+            # Generate access token tied to user identity
+            token = generate_access_token(user.email)
+
+            # Return instance of this mutation with token in response
+            return LoginUser(token=token)
+
+
+class DeleteUser(Mutation):
+    """
+    GraphQL mutation for deleting a user.
+
+    This mutation allows the adminstrator to delete a user from the database.
+    All information about the user e.g. books, orders etc. is also deleted.
+    """
+
+    class Arguments:
+        user_id = String(required=True)
+
+    user = Field(lambda: UserObject)
+
+    @staticmethod
+    @admin_user
+    async def mutate(root, info, user_id):
+        """
+        Handle the deletion of the user from the database.
+
+        Args:
+            root (Object): Root of the mutation
+            info (Object): Information about the mutation
+            user_id (str): Unique user's identifier in the database.
+        """
+
+        async with SessionLocal() as session:
+
+            # Fetch user from database
+            result = await session.execute(select(User).where(User.user_id == user_id))
+            user = result.unique().scalars().one_or_none()
+
+            if not user:
+                # Fail if no user is found with the given id
+                raise GraphQLError("User not found")
+
+            if user.role == UserRole.ADMIN:
+                raise GraphQLError("Administrator user cannot be deleted")
+
+            # delete & sync changes in db
+            await session.delete(user)
+            await session.commit()
+
+            # return instance of the mutation
+            return DeleteUser(user=user)
