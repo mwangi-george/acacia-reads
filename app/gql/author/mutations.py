@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.db import SessionLocal, Author
-from app.gql.author.validators import UpdateAuthorSchema, AddAuthorSchema
+from app.gql.author.schemas import UpdateAuthorSchema, AddAuthorSchema
 from app.gql.types import AuthorObject
 from app.utils.utils import admin_user
 
