@@ -27,7 +27,6 @@ class OrderObject(ObjectType):
 
 class BookObject(ObjectType):
     book_id = String()
-    author_id = String()
     title = String()
     description = String()
     isbn = String()
@@ -36,11 +35,16 @@ class BookObject(ObjectType):
     stock_count = Int()
     added_at = DateTime()
     updated_at = DateTime()
+    authors = List(lambda: AuthorObject)
     order_items = List(lambda: OrderItemObject)
 
     @staticmethod
     def resolve_order_items(root, info):
         return root.order_items
+
+    @staticmethod
+    def resolve_authors(root, info):
+        return root.authors
 
 
 class AuthorObject(ObjectType):
