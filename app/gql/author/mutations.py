@@ -18,13 +18,12 @@ class AddAuthor(Mutation):
 
     This mutation can only be executed by admin users. It checks whether an
     author with the given email already exists, and if not, creates a new
-    author record in the database.
+    author record in the database with the following fields:
 
-    Arguments:
-        - first_name (str): First name of the author.
-        - last_name (str): Last name of the author.
-        - email (str): Email of the author (must be unique).
-        - bio (str, optional): Short biography of the author.
+    - first_name (str): First name of the author.
+    - last_name (str): Last name of the author.
+    - email (str): Email of the author (must be unique).
+    - bio (str, optional): Short biography of the author.
 
     Returns:
         author (AuthorObject): The newly created author.
@@ -119,6 +118,9 @@ class UpdateAuthor(Mutation):
 
     The mutation requires the `author_id` to identify the target author.
     If the author does not exist, a `GraphQLError` is raised.
+
+    Returns:
+        author (AuthorObject): The newly updated author.
     """
 
     class Arguments:
