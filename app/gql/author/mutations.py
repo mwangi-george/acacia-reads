@@ -1,10 +1,12 @@
 from graphene import Mutation, String, Field
 from graphql import GraphQLError
 from loguru import logger
+from pydantic import ValidationError
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.db import SessionLocal, Author
-from app.gql.author.validators import UpdateAuthorSchema
+from app.gql.author.validators import UpdateAuthorSchema, AddAuthorSchema
 from app.gql.types import AuthorObject
 from app.utils.utils import admin_user
 
@@ -56,29 +58,35 @@ class AddAuthor(Mutation):
 
     @staticmethod
     @admin_user
-    async def mutate(root, info, first_name: str, last_name: str, email: str, bio: str = None):
+    async def mutate(root, info, **kwargs):
         """
         Mutation resolver for adding a new author.
 
         Raises:
             GraphQLError: If the email already exists or if an unexpected error occurs.
         """
+        # Validate inputs
+        try:
+            validated_data = AddAuthorSchema(**kwargs).model_dump(exclude_none=True)
+        except ValidationError as e:
+            raise GraphQLError(f"Validation error: {str(e)}")
+
         async with SessionLocal() as session:
+            user_email = validated_data.get("email")
+
             # Check if author with given email already exists
-            db_result = await session.execute(select(Author).where(Author.email == email))
+            db_result = await session.execute(select(Author).where(Author.email == user_email))
             existing_author = db_result.unique().scalars().one_or_none()
 
             if existing_author:
                 # Fail if email is already taken
-                raise GraphQLError(f"Author with email {email} already exists")
+                raise GraphQLError(f"Author with email {user_email} already exists")
 
             # Create new author instance
-            new_author = Author(
-                first_name=first_name,
-                last_name=last_name,
-                email=email,
-                bio=bio if bio else None,
-            )
+            new_author = Author()
+            for field, value in validated_data.items():
+                if hasattr(new_author, field):
+                    setattr(new_author, field, value)
 
             # add record to db
             session.add(new_author)
@@ -163,6 +171,9 @@ class UpdateAuthor(Mutation):
 
                 # Return updated author object
                 return UpdateAuthor(author=author)
+            except IntegrityError as e:
+                logger.error(f"Database error - Duplicate email: {str(e)}")
+                raise GraphQLError(f"Integrity error: {kwargs.get("email")} is already taken.")
 
             except Exception as e:
                 # Rollback in case of error and log the exception
