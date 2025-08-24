@@ -1,6 +1,7 @@
 from graphene import ObjectType
 
-from app.gql.user.queries import UserQueries
+from app.gql.user.queries import UserQuery
+from app.gql.author.queries import AuthorQuery
 
-class Query(UserQueries, ObjectType):
+class Query(UserQuery, AuthorQuery, ObjectType):
     pass

@@ -17,7 +17,7 @@ class UserList(ObjectType):
 
 
 
-class UserQueries(ObjectType):
+class UserQuery(ObjectType):
     """
     GraphQL queries for retrieving user information.
 
