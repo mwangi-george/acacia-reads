@@ -195,6 +195,7 @@ class DeleteAuthor(Mutation):
         - author_id (str): The unique identifier of the author to delete.
 
     Returns:
+        - success (bool): Whether the author was deleted.
         - author (AuthorObject): The deleted author object if successful.
 
     Errors:
