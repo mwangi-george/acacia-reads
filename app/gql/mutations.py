@@ -1,6 +1,6 @@
 from graphene import ObjectType
 
-from app.gql.author.mutations import AddAuthor, UpdateAuthor
+from app.gql.author.mutations import AddAuthor, UpdateAuthor, DeleteAuthor
 from app.gql.user.mutations import AddUser, UpdateUser, LoginUser, DeleteUser
 
 
@@ -17,3 +17,4 @@ class Mutation(ObjectType):
 
     add_author = AddAuthor.Field()
     update_author = UpdateAuthor.Field()
+    delete_author = DeleteAuthor.Field()
