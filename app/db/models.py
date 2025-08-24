@@ -1,6 +1,6 @@
 import shortuuid
 from datetime import timezone, datetime
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Float, Enum, Integer
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Float, Enum, Integer, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
@@ -41,6 +41,16 @@ class User(Base, TimestampMixin):
 
 
 
+# Association table for many-to-many relationship
+book_authors = Table(
+    "book_authors",
+    Base.metadata,
+    Column("book_id", String(22), ForeignKey("books.book_id", ondelete="CASCADE"), primary_key=True),
+    Column("author_id", String(22), ForeignKey("authors.author_id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+
 class Author(Base, TimestampMixin):
     """Author model
     
@@ -62,8 +72,8 @@ class Author(Base, TimestampMixin):
     email = Column(String(60), nullable=False, unique=True, index=True)
     bio = Column(Text, nullable=True)
 
-    # relationships
-    books = relationship('Book', back_populates='author', lazy="joined", cascade="all, delete-orphan")
+    # Many-to-many relationship
+    books = relationship("Book", secondary="book_authors", back_populates="authors", lazy="joined")
 
 
 
@@ -84,16 +94,15 @@ class Book(Base, TimestampMixin):
     __tablename__ = 'books'
     
     book_id = Column(String(22), primary_key=True, unique=True, index=True, default=shortuuid.uuid)
-    author_id = Column(String(22), ForeignKey('authors.author_id'), nullable=False, index=True)  # deliberately allowed one author
     title = Column(String(100), nullable=False)
     description = Column(Text, nullable=True)
     isbn = Column(String(22), nullable=False, unique=True, index=True)
     price = Column(Float, nullable=False)
     category = Column(Enum(BookCategory), nullable=False, index=True)
     stock_count = Column(Integer, nullable=False, default=0)  # Inventory stock
-    
-    # relationships
-    author = relationship('Author', back_populates="books")
+
+    # Many-to-many relationship
+    authors = relationship("Author", secondary="book_authors", back_populates="books", lazy="joined")
     order_items = relationship('OrderItem', back_populates='book', lazy="joined", cascade="all, delete-orphan")
 
 
