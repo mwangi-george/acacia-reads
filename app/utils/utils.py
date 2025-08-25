@@ -177,6 +177,8 @@ def logged_in_user(func: Callable) -> Callable:
     This decorator checks for a valid JWT token in the request context,
     using `get_authenticated_user`. If authentication fails, it raises
     a GraphQL error. Otherwise, it proceeds to call the wrapped resolver.
+    if login is successful the decorator injects the `User` object into
+    resolver kwargs as `current_user`.
 
     Args:
         func (Callable): The resolver function to wrap.
@@ -195,7 +197,10 @@ def logged_in_user(func: Callable) -> Callable:
         info = args[1]  # GraphQL resolver signature: (root, info, **kwargs)
 
         # Ensure user is authenticated (raises error if not)
-        await get_authenticated_user(info.context)
+        user = await get_authenticated_user(info.context)
+
+        # Inject user into resolver as `current_user`
+        kwargs["current_user"] = user
 
         # Continue with the original resolver
         return await func(*args, **kwargs)
