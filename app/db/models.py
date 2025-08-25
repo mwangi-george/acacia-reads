@@ -2,9 +2,8 @@ import shortuuid
 from datetime import timezone, datetime
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Float, Enum, Integer, Table
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
-from app.db.enumerated_types import BookCategory, OrderStatus, UserRole
+from app.db.enumerated_types import BookCategory, OrderStatus, UserRole, PaymentStatus
 
 # Base class for all db models
 Base = declarative_base()
@@ -122,7 +121,8 @@ class Order(Base, TimestampMixin):
     order_id = Column(String(22), primary_key=True, unique=True, index=True, default=shortuuid.uuid)
     user_id = Column(String(22), ForeignKey('users.user_id'), nullable=False, index=True)
     order_date = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-    order_status = Column(Enum(OrderStatus), nullable=False, index=True)
+    order_status = Column(Enum(OrderStatus), nullable=False, index=True, default=OrderStatus.PENDING)
+    payment_status = Column(Enum(PaymentStatus), nullable=False, index=True, default=PaymentStatus.NOT_PAID)
 
     # relationships
     user = relationship('User', back_populates='orders')
@@ -144,16 +144,11 @@ class OrderItem(Base, TimestampMixin):
         - updated_at (datetime)
     """
     __tablename__ = 'order_items'
+
     order_item_id = Column(Integer, primary_key=True, autoincrement=True)
     order_id = Column(String(22), ForeignKey('orders.order_id'), nullable=False)
     book_id = Column(String(22), ForeignKey('books.book_id'), nullable=False)
-    quantity = Column(Integer, nullable=False)
-    unit_price = Column(Float, nullable=False)
-
-    @hybrid_property
-    def total_price(self):
-        """Helps avoid syncing issues when price or quantity changes"""
-        return self.quantity * self.unit_price
+    quantity = Column(Integer, nullable=False, default=0)
 
     # relationships
     order = relationship('Order', back_populates='order_items')

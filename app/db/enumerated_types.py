@@ -43,7 +43,7 @@ class OrderStatus(str, Enum):
 
 class PaymentStatus(str, Enum):
     """An enumeration for various payment statuses"""
-    PENDING = 'PENDING'
+    NOT_PAID = 'NOT_PAID'
     PAID = 'PAID'
     PROCESSING = 'PROCESSING'
     FAILED = 'FAILED'
