@@ -16,8 +16,10 @@ class OrderObject(ObjectType):
     user_id = String()
     order_date = DateTime()
     order_status = String()
+    payment_status = String()
     added_at = DateTime()
     updated_at = DateTime()
+
     order_items = List(lambda: OrderItemObject)
 
     @staticmethod
