@@ -1,7 +1,7 @@
 from graphene import ObjectType, List, Field, String, Int
 from sqlalchemy import select
 
-from app.db import SessionLocal, Book
+from app.db import SessionLocal, Book, User
 from app.db.enumerated_types import BookCategory
 from app.gql.types import BookObject
 from app.utils.utils import logged_in_user
@@ -47,7 +47,7 @@ class BookQuery(ObjectType):
 
     @staticmethod
     @logged_in_user
-    async def resolve_book_categories(self, info):
+    async def resolve_book_categories(self, info, current_user: User):
         """
         Resolver for fetching all available book categories.
 
@@ -58,7 +58,7 @@ class BookQuery(ObjectType):
 
     @staticmethod
     @logged_in_user
-    async def resolve_book(root, info, book_id: str):
+    async def resolve_book(root, info, book_id: str, current_user: User):
         """
         Resolver for fetching a single book by ID.
 
@@ -66,6 +66,7 @@ class BookQuery(ObjectType):
             root (Object): Root of the GraphQL query.
             info (Object): Information about the GraphQL query.
             book_id (str): Unique identifier of the book.
+            current_user (User): Current user browsing the book.
 
         Returns:
             Book | None: A Book object if found, otherwise None.
@@ -78,13 +79,14 @@ class BookQuery(ObjectType):
 
     @staticmethod
     @logged_in_user
-    async def resolve_books(root, info, start: int, limit: int, category: list[str] | None = None):
+    async def resolve_books(root, info, current_user: User, start: int, limit: int, category: list[str] | None = None):
         """
         Resolver for fetching a paginated list of books with optional category filters.
 
         Args:
             root (Root): Root object.
             info (object): Internal info object.
+            current_user (User): Current user browsing the books.
             start (int): Pagination offset (default 0).
             limit (int): Pagination limit (default 10).
             category (list[str] | None): Optional list of categories to filter books by.
