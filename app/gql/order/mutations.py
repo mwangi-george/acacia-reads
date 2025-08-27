@@ -2,7 +2,7 @@ from graphene import Mutation, List, Field, InputObjectType, String, Int
 from graphql import GraphQLError
 from pydantic import ValidationError
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.exc import IntegrityError
 
 from app.db import SessionLocal, Order, User, OrderItem, Book
@@ -100,7 +100,7 @@ class AddOrder(Mutation):
 
                 # --- Step 5: Create order items & deduct stock ---
                 for item in validated_order_data.order_items:
-                    book = books_map[item.book_id]
+                    book = books_map.get(item.book_id)
                     order_item = OrderItem(
                         order_id=order.order_id,
                         book_id=item.book_id,
@@ -124,3 +124,121 @@ class AddOrder(Mutation):
                 await session.rollback()
                 raise GraphQLError("An unexpected error occurred while processing your order. Please try again.")
 
+
+
+class UpdateOrder(Mutation):
+    """
+    GraphQL mutation for updating an existing order and its items.
+
+    Workflow:
+        1. Validate input using Pydantic (`OrderSchema`).
+        2. Ensure the order exists and belongs to the current user.
+        3. Validate book existence and stock availability.
+        4. Update, add, or remove `OrderItem` records accordingly.
+        5. Adjust stock counts for changed quantities.
+        6. Commit the transaction atomically.
+
+    Returns:
+        order (OrderObject): The updated order object.
+    """
+
+    class Arguments:
+        order_id = String(required=True, description="ID of the order to update.")
+        order_items = List(
+            OrderItemInput,
+            required=True,
+            description="Updated list of order items with book_id and quantity."
+        )
+
+    order = Field(OrderObject, description="Details of the updated order.")
+
+    @staticmethod
+    @logged_in_user
+    async def mutate(root, info, order_id, order_items, current_user: User):
+        try:
+            validated_order_data = OrderSchema(order_items=order_items)
+        except ValidationError as e:
+            logger.error(f"Validation error: {str(e)}")
+            raise GraphQLError(f"Validation error: {str(e)}")
+
+        async with SessionLocal() as session:
+            # --- Step 1: Fetch the existing order ---
+            order = await session.get(Order, order_id)
+            if not order or order.user_id != current_user.user_id:
+                raise GraphQLError("Order not found or not authorized to update.")
+
+            # --- Step 2: Build book map ---
+            book_ids = [item.book_id for item in validated_order_data.order_items]
+            result = await session.execute(select(Book).filter(Book.book_id.in_(book_ids)))
+            books_map = {book.book_id: book for book in result.unique().scalars().all()}
+
+            # --- Step 3: Fetch existing order items ---
+            existing_items_result = await session.execute(
+                select(OrderItem).filter(OrderItem.order_id == order_id)
+            )
+            existing_items = {oi.book_id: oi for oi in existing_items_result.scalars().all()}
+
+            # --- Step 4: Update, insert, or remove items ---
+            try:
+                # Track processed book_ids to identify deletions
+                processed_book_ids = set()
+
+                for item in validated_order_data.order_items:
+                    book = books_map.get(item.book_id)
+                    if not book:
+                        raise GraphQLError(f"Book with id {item.book_id} not found.")
+
+                    existing_item = existing_items.get(item.book_id)
+                    if existing_item:
+                        # Adjust stock difference
+                        stock_diff = item.quantity - existing_item.quantity
+                        if stock_diff > 0 and book.stock_count < stock_diff:
+                            raise GraphQLError(
+                                f"Requested additional quantity ({stock_diff}) for book {item.book_id} "
+                                f"exceeds available stock ({book.stock_count})."
+                            )
+                        existing_item.quantity = item.quantity
+                        book.stock_count -= stock_diff
+                    else:
+                        # New item
+                        if book.stock_count < item.quantity:
+                            raise GraphQLError(
+                                f"Requested quantity ({item.quantity}) for book {item.book_id} "
+                                f"exceeds available stock ({book.stock_count})."
+                            )
+                        order_item = OrderItem(
+                            order_id=order.order_id,
+                            book_id=item.book_id,
+                            quantity=item.quantity,
+                        )
+                        session.add(order_item)
+                        book.stock_count -= item.quantity
+
+                    processed_book_ids.add(item.book_id)
+
+                # --- Step 5: Remove items not in updated list ---
+                for book_id, existing_item in existing_items.items():
+                    if book_id not in processed_book_ids:
+                        # restore stock
+                        book = books_map.get(book_id)
+                        if book:
+                            book.stock_count += existing_item.quantity
+                        await session.delete(existing_item)
+
+                # --- Step 6: Commit ---
+                await session.commit()
+                await session.refresh(order)
+                return UpdateOrder(order=order)
+            except GraphQLError as e:
+                logger.error(f"GraphQL error: {str(e)}")
+                raise
+
+            except IntegrityError as e:
+                logger.error(f"Integrity error while updating order: {str(e)}")
+                await session.rollback()
+                raise GraphQLError("Order could not be updated due to a database constraint error.")
+
+            except Exception as e:
+                logger.error(f"Unexpected error while updating order: {str(e)}")
+                await session.rollback()
+                raise GraphQLError("An unexpected error occurred while updating your order. Please try again.")

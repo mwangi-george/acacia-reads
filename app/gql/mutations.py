@@ -2,7 +2,7 @@ from graphene import ObjectType
 
 from app.gql.author.mutations import AddAuthor, UpdateAuthor, DeleteAuthor
 from app.gql.book.mutations import AddBook, UpdateBook
-from app.gql.order.mutations import AddOrder
+from app.gql.order.mutations import AddOrder, UpdateOrder
 from app.gql.user.mutations import AddUser, UpdateUser, LoginUser, DeleteUser
 
 
@@ -25,3 +25,4 @@ class Mutation(ObjectType):
     update_book = UpdateBook.Field()
 
     add_order = AddOrder.Field()
+    update_order = UpdateOrder.Field()
