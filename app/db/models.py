@@ -1,6 +1,6 @@
 import shortuuid
 from datetime import timezone, datetime
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Float, Enum, Integer, Table
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Float, Enum, Integer, Table, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from app.db.enumerated_types import BookCategory, OrderStatus, UserRole, PaymentStatus
@@ -127,6 +127,11 @@ class Order(Base, TimestampMixin):
     # relationships
     user = relationship('User', back_populates='orders')
     order_items = relationship('OrderItem', back_populates='order', lazy="joined", cascade="all, delete-orphan")
+
+    # Composite index
+    __table_args__ = (
+        Index("order_tbl_order_id_user_id_idx", "order_id", "user_id", unique=True),
+    )
     
 
 
@@ -146,11 +151,16 @@ class OrderItem(Base, TimestampMixin):
     __tablename__ = 'order_items'
 
     order_item_id = Column(Integer, primary_key=True, autoincrement=True)
-    order_id = Column(String(22), ForeignKey('orders.order_id'), nullable=False)
-    book_id = Column(String(22), ForeignKey('books.book_id'), nullable=False)
+    order_id = Column(String(22), ForeignKey('orders.order_id'), nullable=False, index=True)
+    book_id = Column(String(22), ForeignKey('books.book_id'), nullable=False, index=True)
     quantity = Column(Integer, nullable=False, default=0)
 
     # relationships
     order = relationship('Order', back_populates='order_items')
     book = relationship('Book', back_populates='order_items')
+
+    # Composite Index
+    __table_args__ = (
+        Index("ix_order_items_order_id_book_id", "order_id", "book_id"),
+    )
 
